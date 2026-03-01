@@ -18,11 +18,14 @@ type Product = {
 
 type StaffAccount = {
   id: string;
+  name: string;
   username: string;
   password: string;
   role: Role;
   active: boolean;
 };
+
+type StoredStaffAccount = Omit<StaffAccount, 'name'> & { name?: string };
 
 type OrderItem = {
   productId: string;
@@ -114,6 +117,7 @@ const defaultProducts: Product[] = [
 const defaultStaff: StaffAccount[] = [
   {
     id: 's-admin',
+    name: 'System Admin',
     username: 'admin',
     password: 'admin123',
     role: 'admin',
@@ -121,6 +125,7 @@ const defaultStaff: StaffAccount[] = [
   },
   {
     id: 's-cashier-1',
+    name: 'Cashier 1',
     username: 'cashier1',
     password: 'cash123',
     role: 'cashier',
@@ -143,6 +148,12 @@ const loadStorage = <T,>(key: string, fallback: T): T => {
 };
 
 const clampMin = (value: number, min = 0) => (value < min ? min : value);
+
+const normalizeStaffAccounts = (accounts: StoredStaffAccount[]): StaffAccount[] =>
+  accounts.map((account) => ({
+    ...account,
+    name: account.name?.trim() || account.username
+  }));
 
 const printTransaction = (transaction: Transaction) => {
   const popup = window.open('', '_blank', 'width=700,height=900');
@@ -194,7 +205,9 @@ const printTransaction = (transaction: Transaction) => {
 
 function App() {
   const [products, setProducts] = useState<Product[]>(() => loadStorage('lods.products', defaultProducts));
-  const [staff, setStaff] = useState<StaffAccount[]>(() => loadStorage('lods.staff', defaultStaff));
+  const [staff, setStaff] = useState<StaffAccount[]>(() =>
+    normalizeStaffAccounts(loadStorage<StoredStaffAccount[]>('lods.staff', defaultStaff))
+  );
   const [transactions, setTransactions] = useState<Transaction[]>(() => loadStorage('lods.transactions', []));
 
   const [search, setSearch] = useState('');
@@ -216,7 +229,13 @@ function App() {
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
   const [authError, setAuthError] = useState('');
 
-  const [staffForm, setStaffForm] = useState({ username: '', password: '', role: 'cashier' as Role, active: true });
+  const [staffForm, setStaffForm] = useState({
+    name: '',
+    username: '',
+    password: '',
+    role: 'cashier' as Role,
+    active: true
+  });
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
 
   const [productForm, setProductForm] = useState({
@@ -486,7 +505,7 @@ function App() {
       orderId,
       receiptNo,
       createdAt: now.toISOString(),
-      cashierName: currentAccount?.username ?? 'Unknown',
+      cashierName: currentAccount?.name ?? currentAccount?.username ?? 'Unknown',
       items: transactionItems,
       subtotal,
       discountType,
@@ -566,8 +585,8 @@ function App() {
   };
 
   const saveStaff = () => {
-    if (!staffForm.username || !staffForm.password) {
-      setNotice('Username and password are required for staff accounts.');
+    if (!staffForm.name || !staffForm.username || !staffForm.password) {
+      setNotice('Name, username, and password are required for staff accounts.');
       return;
     }
 
@@ -577,6 +596,7 @@ function App() {
           account.id === editingStaffId
             ? {
                 ...account,
+                name: staffForm.name,
                 username: staffForm.username,
                 password: staffForm.password,
                 role: staffForm.role,
@@ -590,6 +610,7 @@ function App() {
       setStaff((previous) => [
         {
           id: `s-${Date.now()}`,
+          name: staffForm.name,
           username: staffForm.username,
           password: staffForm.password,
           role: staffForm.role,
@@ -601,12 +622,13 @@ function App() {
     }
 
     setEditingStaffId(null);
-    setStaffForm({ username: '', password: '', role: 'cashier', active: true });
+    setStaffForm({ name: '', username: '', password: '', role: 'cashier', active: true });
   };
 
   const editStaff = (account: StaffAccount) => {
     setEditingStaffId(account.id);
     setStaffForm({
+      name: account.name,
       username: account.username,
       password: account.password,
       role: account.role,
@@ -729,49 +751,53 @@ function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div>
-          <h1>LODS CAFE POS</h1>
-          <p>{new Date().toLocaleString()}</p>
-        </div>
-        <div className="session-box">
-          {currentAccount ? (
-            <>
-              <label>Signed In</label>
-              <div className="signin-row">
-                <span>
-                  {currentAccount.username} ({currentAccount.role})
-                </span>
-                <button onClick={signOut}>Sign Out</button>
-              </div>
-            </>
-          ) : (
-            <>
-              <label>Staff Sign In</label>
-              <div className="signin-grid">
-                <input
-                  placeholder="Username"
-                  value={authForm.username}
-                  onChange={(event) => setAuthForm((previous) => ({ ...previous, username: event.target.value }))}
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={authForm.password}
-                  onChange={(event) => setAuthForm((previous) => ({ ...previous, password: event.target.value }))}
-                />
-                <button
-                  onClick={signIn}
-                  disabled={!authForm.username.trim() || !authForm.password.trim()}
-                >
-                  Sign In
-                </button>
-              </div>
-              {authError && <small className="error-text">{authError}</small>}
-            </>
-          )}
-        </div>
-      </header>
+      {currentAccount && (
+        <header className="topbar">
+          <div>
+            <h1>LODS CAFE POS</h1>
+            <p>{new Date().toLocaleString()}</p>
+          </div>
+          <div className="session-box">
+            <label>Signed In</label>
+            <div className="signin-row">
+              <span>
+                {currentAccount.name} ({currentAccount.role})
+              </span>
+              <button onClick={signOut}>Sign Out</button>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {!currentAccount && (
+        <section className="auth-center">
+          <div className="panel auth-card">
+            <h1>LODS CAFE POS</h1>
+            <p>{new Date().toLocaleString()}</p>
+            <label>Staff Sign In</label>
+            <div className="signin-grid">
+              <input
+                placeholder="Username"
+                value={authForm.username}
+                onChange={(event) => setAuthForm((previous) => ({ ...previous, username: event.target.value }))}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={authForm.password}
+                onChange={(event) => setAuthForm((previous) => ({ ...previous, password: event.target.value }))}
+              />
+              <button
+                onClick={signIn}
+                disabled={!authForm.username.trim() || !authForm.password.trim()}
+              >
+                Sign In
+              </button>
+            </div>
+            {authError && <small className="error-text">{authError}</small>}
+          </div>
+        </section>
+      )}
 
       {currentAccount && (
         <>
@@ -1202,6 +1228,11 @@ function App() {
             <h2>Sub-Accounts & Staff Management</h2>
             <div className="grid-form">
               <input
+                placeholder="Full name"
+                value={staffForm.name}
+                onChange={(event) => setStaffForm((previous) => ({ ...previous, name: event.target.value }))}
+              />
+              <input
                 placeholder="Username"
                 value={staffForm.username}
                 onChange={(event) => setStaffForm((previous) => ({ ...previous, username: event.target.value }))}
@@ -1234,7 +1265,7 @@ function App() {
                 <button
                   onClick={() => {
                     setEditingStaffId(null);
-                    setStaffForm({ username: '', password: '', role: 'cashier', active: true });
+                    setStaffForm({ name: '', username: '', password: '', role: 'cashier', active: true });
                   }}
                 >
                   Cancel
@@ -1247,6 +1278,7 @@ function App() {
             <table>
               <thead>
                 <tr>
+                  <th>Name</th>
                   <th>Username</th>
                   <th>Role</th>
                   <th>Status</th>
@@ -1256,6 +1288,7 @@ function App() {
               <tbody>
                 {staff.map((account) => (
                   <tr key={account.id}>
+                    <td>{account.name}</td>
                     <td>{account.username}</td>
                     <td>{account.role}</td>
                     <td>{account.active ? 'Active' : 'Inactive'}</td>
