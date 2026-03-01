@@ -1,0 +1,13 @@
+- [x] Verify that the copilot-instructions.md file in the .github directory is created.
+- [x] Clarify Project Requirements.
+- [x] Scaffold the Project (manual scaffold due missing Node.js/npm/npx in environment).
+- [x] Customize the Project.
+- [x] Install Required Extensions (no required extensions returned by setup info).
+- [x] Compile the Project (Node.js installed, dependencies installed, `npm run build` passed).
+- [x] Create and Run Task (VS Code task created and running dev server).
+- [x] Launch the Project (opened at http://localhost:5173/).
+- [x] Ensure Documentation is Complete (README and instructions updated; HTML comments removed).
+
+- Work through each checklist item systematically.
+- Keep communication concise and focused.
+- Follow development best practices.

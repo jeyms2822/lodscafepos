@@ -773,139 +773,150 @@ function App() {
         </div>
       </header>
 
-      <nav className="tabs">
-        <button className={tab === 'pos' ? 'active' : ''} onClick={() => setTab('pos')}>
-          POS
-        </button>
-        {canAdmin && (
-          <button className={tab === 'dashboard' ? 'active' : ''} onClick={() => setTab('dashboard')}>
-            Dashboard
-          </button>
-        )}
-        {canHistory && (
-          <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
-            Sales History
-          </button>
-        )}
-        {canAdmin && (
-          <button className={tab === 'staff' ? 'active' : ''} onClick={() => setTab('staff')}>
-            Staff Accounts
-          </button>
-        )}
-      </nav>
+      {currentAccount && (
+        <>
+          <nav className="tabs">
+            <button className={tab === 'pos' ? 'active' : ''} onClick={() => setTab('pos')}>
+              POS
+            </button>
+            {canAdmin && (
+              <button className={tab === 'dashboard' ? 'active' : ''} onClick={() => setTab('dashboard')}>
+                Dashboard
+              </button>
+            )}
+            {canHistory && (
+              <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
+                Sales History
+              </button>
+            )}
+            {canAdmin && (
+              <button className={tab === 'staff' ? 'active' : ''} onClick={() => setTab('staff')}>
+                Staff Accounts
+              </button>
+            )}
+          </nav>
 
-      {notice && <div className="notice">{notice}</div>}
+          {notice && <div className="notice">{notice}</div>}
 
-      {tab === 'pos' && (
+          {tab === 'pos' && (
         <section className="pos-layout">
           <div className="menu-area">
-            <div className="panel">
-              <h2>{editingProductId ? 'Edit Product Item' : 'Add Product Item'}</h2>
-              <div className="grid-form">
-                <input
-                  placeholder="Product name"
-                  value={productForm.name}
-                  onChange={(event) => setProductForm((previous) => ({ ...previous, name: event.target.value }))}
-                />
-                <input
-                  placeholder="Category"
-                  value={productForm.category}
-                  onChange={(event) => setProductForm((previous) => ({ ...previous, category: event.target.value }))}
-                />
-                <input
-                  placeholder="Image URL"
-                  value={productForm.image}
-                  onChange={(event) => setProductForm((previous) => ({ ...previous, image: event.target.value }))}
-                />
-                <input
-                  type="number"
-                  placeholder="Price"
-                  value={productForm.price}
-                  onChange={(event) =>
-                    setProductForm((previous) => ({ ...previous, price: Number(event.target.value) }))
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="Raw cost"
-                  value={productForm.rawCost}
-                  onChange={(event) =>
-                    setProductForm((previous) => ({ ...previous, rawCost: Number(event.target.value) }))
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="Stock"
-                  value={productForm.stock}
-                  onChange={(event) =>
-                    setProductForm((previous) => ({ ...previous, stock: Number(event.target.value) }))
-                  }
-                />
-              </div>
-              <div className="row-actions">
-                <button onClick={saveProduct}>{editingProductId ? 'Update Product' : 'Add Product'}</button>
-                {editingProductId && <button onClick={clearProductForm}>Cancel</button>}
-              </div>
-            </div>
-
-            <div className="panel">
-              <div className="panel-head">
-                <h2>Visual Product Catalog</h2>
-                <input
-                  className="search"
-                  placeholder="Search products"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
-
-              {Object.keys(groupedProducts).length === 0 && <p>No products found.</p>}
-
-              {Object.entries(groupedProducts).map(([category, items]) => (
-                <div key={category} className="category-group">
-                  <h3>{category}</h3>
-                  <div className="card-grid">
-                    {items.map((product) => {
-                      const inOrder = orderedQtyMap[product.id] ?? 0;
-                      const available = product.stock - inOrder;
-                      return (
-                        <article key={product.id} className="item-card">
-                          <img src={product.image} alt={product.name} />
-                          <div className="card-body">
-                            <div className="card-top">
-                              <strong>{product.name}</strong>
-                              <button title="Edit product" className="icon-btn" onClick={() => startEditProduct(product)}>
-                                ✏️
-                              </button>
-                            </div>
-                            <p>{PHP.format(product.price)}</p>
-                            <p className={available <= 0 ? 'stock low' : 'stock'}>
-                              Available stock: {available}
-                            </p>
-                            <div className="card-actions">
-                              <input
-                                type="number"
-                                min={1}
-                                value={cardQty[product.id] ?? 1}
-                                onChange={(event) =>
-                                  setCardQty((previous) => ({
-                                    ...previous,
-                                    [product.id]: clampMin(Number(event.target.value), 1)
-                                  }))
-                                }
-                              />
-                              <button onClick={() => addToOrder(product)} disabled={!currentAccount}>
-                                Add
-                              </button>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
+            {currentAccount ? (
+              <>
+                <div className="panel">
+                  <h2>{editingProductId ? 'Edit Product Item' : 'Add Product Item'}</h2>
+                  <div className="grid-form">
+                    <input
+                      placeholder="Product name"
+                      value={productForm.name}
+                      onChange={(event) => setProductForm((previous) => ({ ...previous, name: event.target.value }))}
+                    />
+                    <input
+                      placeholder="Category"
+                      value={productForm.category}
+                      onChange={(event) => setProductForm((previous) => ({ ...previous, category: event.target.value }))}
+                    />
+                    <input
+                      placeholder="Image URL"
+                      value={productForm.image}
+                      onChange={(event) => setProductForm((previous) => ({ ...previous, image: event.target.value }))}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Price"
+                      value={productForm.price}
+                      onChange={(event) =>
+                        setProductForm((previous) => ({ ...previous, price: Number(event.target.value) }))
+                      }
+                    />
+                    <input
+                      type="number"
+                      placeholder="Raw cost"
+                      value={productForm.rawCost}
+                      onChange={(event) =>
+                        setProductForm((previous) => ({ ...previous, rawCost: Number(event.target.value) }))
+                      }
+                    />
+                    <input
+                      type="number"
+                      placeholder="Stock"
+                      value={productForm.stock}
+                      onChange={(event) =>
+                        setProductForm((previous) => ({ ...previous, stock: Number(event.target.value) }))
+                      }
+                    />
+                  </div>
+                  <div className="row-actions">
+                    <button onClick={saveProduct}>{editingProductId ? 'Update Product' : 'Add Product'}</button>
+                    {editingProductId && <button onClick={clearProductForm}>Cancel</button>}
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="panel">
+                  <div className="panel-head">
+                    <h2>Visual Product Catalog</h2>
+                    <input
+                      className="search"
+                      placeholder="Search products"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                    />
+                  </div>
+
+                  {Object.keys(groupedProducts).length === 0 && <p>No products found.</p>}
+
+                  {Object.entries(groupedProducts).map(([category, items]) => (
+                    <div key={category} className="category-group">
+                      <h3>{category}</h3>
+                      <div className="card-grid">
+                        {items.map((product) => {
+                          const inOrder = orderedQtyMap[product.id] ?? 0;
+                          const available = product.stock - inOrder;
+                          return (
+                            <article key={product.id} className="item-card">
+                              <img src={product.image} alt={product.name} />
+                              <div className="card-body">
+                                <div className="card-top">
+                                  <strong>{product.name}</strong>
+                                  <button title="Edit product" className="icon-btn" onClick={() => startEditProduct(product)}>
+                                    ✏️
+                                  </button>
+                                </div>
+                                <p>{PHP.format(product.price)}</p>
+                                <p className={available <= 0 ? 'stock low' : 'stock'}>
+                                  Available stock: {available}
+                                </p>
+                                <div className="card-actions">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={cardQty[product.id] ?? 1}
+                                    onChange={(event) =>
+                                      setCardQty((previous) => ({
+                                        ...previous,
+                                        [product.id]: clampMin(Number(event.target.value), 1)
+                                      }))
+                                    }
+                                  />
+                                  <button onClick={() => addToOrder(product)} disabled={!currentAccount}>
+                                    Add
+                                  </button>
+                                </div>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="panel">
+                <h2>Visual Product Catalog</h2>
+                <p>Sign in to view products.</p>
+              </div>
+            )}
           </div>
 
           <aside className="order-sidebar">
@@ -1029,9 +1040,9 @@ function App() {
             </div>
           </aside>
         </section>
-      )}
+          )}
 
-      {tab === 'dashboard' && canAdmin && (
+          {tab === 'dashboard' && canAdmin && (
         <section className="dashboard">
           <div className="panel filter-row">
             <h2>Gross Sales Dashboard & Analytics</h2>
@@ -1115,9 +1126,9 @@ function App() {
             </p>
           </div>
         </section>
-      )}
+          )}
 
-      {tab === 'history' && canHistory && (
+          {tab === 'history' && canHistory && (
         <section className="history">
           <div className="panel filter-row">
             <h2>History Sales List & Auditing</h2>
@@ -1183,9 +1194,9 @@ function App() {
             </table>
           </div>
         </section>
-      )}
+          )}
 
-      {tab === 'staff' && canAdmin && (
+          {tab === 'staff' && canAdmin && (
         <section className="staff">
           <div className="panel">
             <h2>Sub-Accounts & Staff Management</h2>
@@ -1271,9 +1282,9 @@ function App() {
             </table>
           </div>
         </section>
-      )}
+          )}
 
-      {(lastReceipt || viewTransaction) && (
+          {(lastReceipt || viewTransaction) && (
         <div className="modal-overlay">
           <div className="modal">
             <h2>Official Receipt</h2>
@@ -1317,12 +1328,14 @@ function App() {
             })()}
           </div>
         </div>
-      )}
+          )}
 
-      <footer className="app-footer">
-        <strong>{CAFE_NAME}</strong>
-        <p>{CAFE_ADDRESS}</p>
-      </footer>
+          <footer className="app-footer">
+            <strong>{CAFE_NAME}</strong>
+            <p>{CAFE_ADDRESS}</p>
+          </footer>
+        </>
+      )}
     </div>
   );
 }
