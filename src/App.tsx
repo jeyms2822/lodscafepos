@@ -65,6 +65,7 @@ const PHP = new Intl.NumberFormat('en-PH', {
 
 const CAFE_NAME = 'LODS CAFE';
 const CAFE_ADDRESS = '1410 Kapanalig Barangay 28 Maypajo, Caloocan City.';
+const RECEIPT_BRAND = 'Sip Up Coffee & Ko-Tea';
 
 const defaultProducts: Product[] = [
   {
@@ -155,10 +156,12 @@ const normalizeStaffAccounts = (accounts: StoredStaffAccount[]): StaffAccount[] 
     name: account.name?.trim() || account.username
   }));
 
-const printTransaction = (transaction: Transaction) => {
+const normalizeStoredArray = <T,>(value: unknown, fallback: T[]): T[] => (Array.isArray(value) ? (value as T[]) : fallback);
+
+const printTransaction = (transaction: Transaction): boolean => {
   const popup = window.open('', '_blank', 'width=700,height=900');
   if (!popup) {
-    return;
+    return false;
   }
   const items = transaction.items
     .map(
@@ -172,18 +175,35 @@ const printTransaction = (transaction: Transaction) => {
   popup.document.write(`
     <html>
       <head>
-        <title>Official Receipt - ${transaction.receiptNo}</title>
+        <title>${RECEIPT_BRAND} - ${transaction.receiptNo}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 16px; }
-          h2 { margin: 0 0 8px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-          td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          .meta { margin: 4px 0; }
+          @page { size: 58mm auto; margin: 2mm; }
+          * { box-sizing: border-box; }
+          body {
+            font-family: 'Courier New', monospace;
+            width: 54mm;
+            margin: 0 auto;
+            padding: 0;
+            font-size: 11px;
+            line-height: 1.25;
+          }
+          h2 {
+            margin: 0 0 6px;
+            text-align: center;
+            font-size: 13px;
+          }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          td, th { border-bottom: 1px dashed #444; padding: 3px 0; text-align: left; font-size: 10px; }
+          th:last-child,
+          td:last-child { text-align: right; }
+          .meta { margin: 2px 0; }
+          .center { text-align: center; }
+          .total { margin-top: 6px; font-weight: 700; }
         </style>
       </head>
       <body>
-        <h2>${CAFE_NAME} - Official Receipt</h2>
-        <div class="meta">${CAFE_ADDRESS}</div>
+        <h2>${RECEIPT_BRAND}</h2>
+        <div class="meta center">${CAFE_ADDRESS}</div>
         <div class="meta">Receipt #: ${transaction.receiptNo}</div>
         <div class="meta">Order ID: ${transaction.orderId}</div>
         <div class="meta">Date & Time: ${new Date(transaction.createdAt).toLocaleString()}</div>
@@ -194,21 +214,35 @@ const printTransaction = (transaction: Transaction) => {
         </table>
         <p>Subtotal: ${PHP.format(transaction.subtotal)}</p>
         <p>Discount: ${PHP.format(transaction.discountAmount)}</p>
-        <p><strong>Total Paid: ${PHP.format(transaction.finalTotal)}</strong></p>
+        <p class="total">Total Paid: ${PHP.format(transaction.finalTotal)}</p>
       </body>
     </html>
   `);
   popup.document.close();
   popup.focus();
-  popup.print();
+  const runPrint = () => {
+    popup.print();
+  };
+  if (popup.document.readyState === 'complete') {
+    setTimeout(runPrint, 120);
+  } else {
+    popup.onload = () => setTimeout(runPrint, 120);
+  }
+  return true;
 };
 
 function App() {
-  const [products, setProducts] = useState<Product[]>(() => loadStorage('lods.products', defaultProducts));
-  const [staff, setStaff] = useState<StaffAccount[]>(() =>
-    normalizeStaffAccounts(loadStorage<StoredStaffAccount[]>('lods.staff', defaultStaff))
+  const [products, setProducts] = useState<Product[]>(() =>
+    normalizeStoredArray<Product>(loadStorage<unknown>('lods.products', defaultProducts), defaultProducts)
   );
-  const [transactions, setTransactions] = useState<Transaction[]>(() => loadStorage('lods.transactions', []));
+  const [staff, setStaff] = useState<StaffAccount[]>(() =>
+    normalizeStaffAccounts(
+      normalizeStoredArray<StoredStaffAccount>(loadStorage<unknown>('lods.staff', defaultStaff), defaultStaff)
+    )
+  );
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    normalizeStoredArray<Transaction>(loadStorage<unknown>('lods.transactions', []), [])
+  );
 
   const [search, setSearch] = useState('');
   const [cardQty, setCardQty] = useState<Record<string, number>>({});
@@ -343,8 +377,8 @@ function App() {
     const keyword = search.trim().toLowerCase();
     return products.filter(
       (product) =>
-        product.name.toLowerCase().includes(keyword) ||
-        product.category.toLowerCase().includes(keyword)
+        (product.name ?? '').toLowerCase().includes(keyword) ||
+        (product.category ?? '').toLowerCase().includes(keyword)
     );
   }, [products, search]);
 
@@ -717,7 +751,7 @@ function App() {
 
   const downloadReceipt = (transaction: Transaction) => {
     const lines = [
-      `${CAFE_NAME} - Official Receipt`,
+      RECEIPT_BRAND,
       CAFE_ADDRESS,
       `Receipt #: ${transaction.receiptNo}`,
       `Order ID: ${transaction.orderId}`,
@@ -742,6 +776,13 @@ function App() {
     link.download = `${transaction.receiptNo}.txt`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handlePrintReceipt = (transaction: Transaction) => {
+    const opened = printTransaction(transaction);
+    if (!opened) {
+      setNotice('Print window was blocked. Allow pop-ups for this site then try again.');
+    }
   };
 
   const maxBreakdown = Math.max(metrics.netSales, metrics.grossSales, metrics.rawMaterialCost, metrics.voidedSales, 1);
@@ -1204,7 +1245,7 @@ function App() {
                     </td>
                     <td className="actions-cell">
                       <button onClick={() => setViewTransaction(transaction)}>View</button>
-                      <button onClick={() => printTransaction(transaction)}>Print</button>
+                      <button onClick={() => handlePrintReceipt(transaction)}>Print</button>
                       {canVoid && transaction.status !== 'Voided' && (
                         <button onClick={() => voidTransaction(transaction.orderId)}>Void</button>
                       )}
@@ -1320,7 +1361,7 @@ function App() {
           {(lastReceipt || viewTransaction) && (
         <div className="modal-overlay">
           <div className="modal">
-            <h2>Official Receipt</h2>
+            <h2>{RECEIPT_BRAND}</h2>
             {(() => {
               const record = lastReceipt ?? viewTransaction;
               if (!record) {
@@ -1329,7 +1370,7 @@ function App() {
               return (
                 <>
                   <p>
-                    <strong>{CAFE_NAME}</strong>
+                    <strong>{RECEIPT_BRAND}</strong>
                   </p>
                   <p>{CAFE_ADDRESS}</p>
                   <p>Receipt #: {record.receiptNo}</p>
@@ -1346,7 +1387,7 @@ function App() {
                   <p>Total Paid: {PHP.format(record.finalTotal)}</p>
                   <div className="row-actions">
                     <button onClick={() => downloadReceipt(record)}>Download</button>
-                    <button onClick={() => printTransaction(record)}>Print</button>
+                    <button onClick={() => handlePrintReceipt(record)}>Print</button>
                     <button
                       onClick={() => {
                         setLastReceipt(null);

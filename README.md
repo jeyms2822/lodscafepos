@@ -4,7 +4,7 @@ A React + TypeScript web POS for LODS CAFE with:
 
 - Menu catalog with add/edit product items, search, stock tracking, and flexible ordering
 - Checkout flow with discounts (percent/fixed), quick discount buttons, multi-payment methods, quick cash add, and change validation
-- Official receipt generation with Download / Print / Close
+- Official receipt generation with Add Printer profile, Download / Print / Close
 - Sub-account and staff management with role-based access (admin/cashier/employee)
 - Gross sales dashboard and analytics with date filtering and KPI cards
 - Sales history list with auditing actions (View / Print / Void), current month quick filter, and true Excel (.xlsx) export
